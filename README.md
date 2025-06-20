@@ -1,15 +1,46 @@
 # Luawiki
+
 My favorite parts of [Vimwiki](https://github.com/vimwiki/vimwiki) + other stuff I come up with
 
 As of 2024-09-06 I no longer use Vimwiki. It was a great ride
 
-### Features:
+### Features
+
 - Keybinds for creating and following links
 
+### Installation
 
-### Installation:
 Install using your preferred nvim package manager.
 
+#### Example Lazy.nvim setup (with render markdown)
+
+```lua
+return {
+  {
+    "phil-kyusu/luawiki",
+    opts = {
+      mappings = {
+        todo = "<leader>t",
+        backwards = "<BS>",
+        follow = "<CR>",
+      },
+    },
+  },
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    opts = {
+      checkbox = {
+        enabled = true,
+      },
+      heading = {
+        enabled = true,
+      },
+    },
+  },
+}
+```
+
+```
 
 Then, `require("luawiki").setup {}` in your `init.lua`.
 
@@ -28,6 +59,7 @@ Note: this plugin is unfortunately incompatible with [vim-autopairs](https://git
 
 #### Configuring:
 There is effectively nothing to configure.
+
 
 ### Considering:
 - [ ] jumping between wiki links with tab
