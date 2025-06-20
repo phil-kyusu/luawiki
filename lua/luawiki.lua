@@ -14,8 +14,20 @@ local function replace_line(row, new)
 end
 
 local function keymap_a(mode, lhs, rhs, opts)
-    opts = opts or { buffer = 0 }
-    vim.keymap.set(mode, lhs, rhs, opts)
+  opts = opts or { buffer = 0 }
+
+  if type(rhs) == "function" then
+    local orig = rhs
+    rhs = function(...)
+      local win_conf = vim.api.nvim_win_get_config(0)
+      if win_conf.relative ~= "" then
+        return opts.expr and lhs or nil
+      end
+      return orig(...)
+    end
+  end
+
+  vim.keymap.set(mode, lhs, rhs, opts)
 end
 
 local cr = vim.api.nvim_replace_termcodes("<CR>", true, true, true)
