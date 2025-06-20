@@ -1,3 +1,4 @@
+local M = {}
 local function ind(s, i)
     return string.sub(s, i, i)
 end
@@ -91,7 +92,7 @@ local function continue_todo()
     return true -- if continued
 end
 
-local Config = {
+local defaults = {
     filemaps = {
         markdown = {
             pattern = {"*.md"},
@@ -136,68 +137,54 @@ local Config = {
     }
 }
 
+-- Local state
+local Config = {}
+local Depth = {}
 
+-- Link and go back
 local function link(filetype)
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    local line = vim.api.nvim_buf_get_lines(0, row-1, row, {})[1]
-    local s = col
-    local e = col+1
-    local filemap = Config.filemaps[filetype]
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_buf_get_lines(0, row - 1, row, {})[1]
+  local s, e = col, col + 1
+  local filemap = Config.filemaps[filetype]
 
-    while s > 0 and ind(line, s) ~= ' ' do
-        s = s - 1
-    end
-    while e <= string.len(line) and ind(line, e) ~= ' ' do
-        e = e + 1
-    end
+  while s > 0 and ind(line, s) ~= ' ' do s = s - 1 end
+  while e <= #line and ind(line, e) ~= ' ' do e = e + 1 end
 
-    local block = string.sub(line, s, e)
+  local block = string.sub(line, s, e)
+  if starts(block, " ") then block = string.sub(block, 2) end
+  if ends(block, " ") then block = string.sub(block, 1, #block - 1) end
 
-    if starts(block, " ") then
-        block = string.sub(block, 2, string.len(block))
-    end
-    if ends(block, " ") then
-        block = string.sub(block, 1, string.len(block) - 1)
-    end
-
-
-    if (starts(block, filemap.linkstart) and ends(block, filemap.linkstop)) then
-        table.insert(Depth, vim.api.nvim_buf_get_name(0))
-        vim.cmd("e " .. filemap.getlink(block))
-    elseif (string.len(block) > 0) then
-        vim.api.nvim_buf_set_text(0, row - 1, s, row - 1, e-1, { filemap.formatlink(block) })
-    end
+  if starts(block, filemap.linkstart) and ends(block, filemap.linkstop) then
+    table.insert(Depth, vim.api.nvim_buf_get_name(0))
+    vim.cmd("e " .. filemap.getlink(block))
+  elseif #block > 0 then
+    vim.api.nvim_buf_set_text(0, row - 1, s, row - 1, e - 1, { filemap.formatlink(block) })
+  end
 end
-
 
 local function goback()
-    if #Depth > 0 then
-        vim.cmd("e " .. table.remove(Depth))
-    end
+  if #Depth > 0 then
+    vim.cmd("e " .. table.remove(Depth))
+  end
 end
 
-local function setup(params)
-    Config = vim.tbl_deep_extend("force", Config, params or {})
+-- Setup
+function M.setup(user_opts)
+  Config = vim.tbl_deep_extend("force", {}, defaults, user_opts or {})
 
-    for filetype, tbl in pairs(Config.filemaps) do
-        vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
-            pattern = tbl.pattern,
-            callback = function()
-                vim.schedule(function()
-                    keymap_a('n', '<CR>', function() link(filetype) end)
-                    keymap_a('n', '<BS>', goback)
-                    if tbl.extras ~= nil then
-                        tbl.extras()
-                    end
-                end)
-            end
-        })
-    end
+  for filetype, tbl in pairs(Config.filemaps) do
+    vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+      pattern = tbl.pattern,
+      callback = function()
+        vim.schedule(function()
+          keymap_a('n', '<CR>', function() link(filetype) end)
+          keymap_a('n', '<BS>', goback)
+          if tbl.extras then tbl.extras() end
+        end)
+      end
+    })
+  end
 end
 
-Depth = {}
-
-
-return {
-    setup = setup,
-}
+return M
